@@ -11,59 +11,35 @@ size_t number_neighbours(std::vector<bool> &grid, const size_t x, const size_t y
   
   // North
   bool is_north_ok = y > 0;
-  size_t north = y - 1;
-  if (is_north_ok && grid[x + north * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] North\n");
-  }
+  size_t north = y - 1;  
+  if (is_north_ok && grid[x + north * nbr_cell_x]) nbr_neighbours++;
   
   // East
-  bool is_east_ok = x < nbr_cell_x;
+  bool is_east_ok = x < (nbr_cell_x - 1);
   size_t east = x + 1;
-  if (is_east_ok && grid[east + y * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] East\n");
-  }
+  if (is_east_ok && grid[east + y * nbr_cell_x]) nbr_neighbours++;
   
   // South
-  bool is_south_ok = y < nbr_cell_y;
+  bool is_south_ok = y < (nbr_cell_y - 1);
   size_t south = y + 1;
-  if (is_south_ok && grid[x + south * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] South\n");
-  }
+  if (is_south_ok && grid[x + south * nbr_cell_x]) nbr_neighbours++;
   
   // West
   bool is_west_ok = x > 0;
   size_t west = x - 1;
-  if (is_west_ok && grid[west + y * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] West\n");
-  }
+  if (is_west_ok && grid[west + y * nbr_cell_x]) nbr_neighbours++;
 
   // North - East
-  if (is_north_ok && is_east_ok && grid[east + north * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] North - East\n");
-  }
+  if (is_north_ok && is_east_ok && grid[east + north * nbr_cell_x]) nbr_neighbours++;
   
   // North - West
-  if (is_north_ok && is_west_ok && grid[west + north * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] North - West\n");
-  }
+  if (is_north_ok && is_west_ok && grid[west + north * nbr_cell_x]) nbr_neighbours++;
   
   // South - East
-  if (is_south_ok && is_east_ok && grid[east + south * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] South - East\n");
-  }
+  if (is_south_ok && is_east_ok && grid[east + south * nbr_cell_x]) nbr_neighbours++;
   
-  // North - West
-  if (is_south_ok && is_west_ok && grid[west + south * grid.size()]) {
-    nbr_neighbours++;
-    printf("[#] South - West\n");
-  }
+  // South - West
+  if (is_south_ok && is_west_ok && grid[west + south * nbr_cell_x]) nbr_neighbours++;
   
   return nbr_neighbours;
 }
@@ -85,6 +61,34 @@ size_t randomize(std::vector<bool> &grid)
   }
   
   return nbr_cell_used;
+}
+
+std::vector<bool> next_generation(std::vector<bool> &grid, const size_t nbr_cell_x, const size_t nbr_cell_y)
+{
+  size_t nbr_neig = 0;
+  std::vector<bool> new_grid = std::vector<bool>(grid.size());
+  for (size_t i = 0; i < nbr_cell_x; ++i)
+  {
+    for (size_t j = 0; j < nbr_cell_y; ++j)
+    {
+      nbr_neig = number_neighbours(grid, i, j, nbr_cell_x, nbr_cell_y);
+      
+      // Living cell
+      if (grid[i + j * nbr_cell_x])
+      {
+        // Underpopulation || overpopulation
+        if (nbr_neig < 2 || nbr_neig > 3)
+          new_grid[i + j * nbr_cell_x] = false;
+      }
+      else
+      {
+        if (nbr_neig == 3)
+          new_grid[i + j * nbr_cell_x] = true;
+      }
+    }
+  }
+  
+  return new_grid;
 }
 
 void generate_quads(std::vector<sf::VertexArray*> &quads, std::vector<bool> &grid, const size_t nbr_cell_x, const size_t nbr_cell_y, const size_t cell_width, const size_t cell_height)
@@ -121,7 +125,6 @@ void generate_quads(std::vector<sf::VertexArray*> &quads, std::vector<bool> &gri
 
 int main()
 {
-  /*
   srand(time(NULL));
   
   int window_width = 800;
@@ -171,26 +174,15 @@ int main()
       window.draw(*quads[i]);
     }
     
-    window.display();        
+    window.display();
+    
+    grid = next_generation(grid, nbr_cell_x, nbr_cell_y);
+    generate_quads(quads, grid, nbr_cell_x, nbr_cell_y, cell_width, cell_height);
   }
   
   for (size_t i = 0; i < quads.size(); ++i) {
     delete quads[i];
   }
-  */
-  
-  std::vector<bool> grid = std::vector<bool>(9);
-  
-  grid[0] = true;
-  grid[1] = true;
-  grid[2] = true;
-  grid[3] = true;
-  grid[4] = true;
-  grid[5] = true;
-  grid[6] = true;
-  grid[7] = true;
-  
-  printf("[*] Nbr neighbours : %zu\n", number_neighbours(grid, 1, 1, 3, 3));
   
   return 0;
 }
