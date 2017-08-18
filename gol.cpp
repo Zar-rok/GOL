@@ -5,6 +5,7 @@
 
 #include <SFML/Graphics.hpp>
 
+/* Compute the number of neighbours of one cell. */
 size_t number_neighbours(std::vector<bool> &grid, const size_t x, const size_t y, const size_t nbr_cell_x, const size_t nbr_cell_y)
 {
   size_t nbr_neighbours = 0;
@@ -44,12 +45,14 @@ size_t number_neighbours(std::vector<bool> &grid, const size_t x, const size_t y
   return nbr_neighbours;
 }
 
+/* Fill randomly the boolean vector who represent the population of the grid (true = alive, false = dead). */
 void randomize(std::vector<bool> &grid, const int threshold_birth)
 {
   for (size_t i = 0; i < grid.size(); ++i)
     grid[i] = (rand() % 100) > threshold_birth;
 }
 
+/* Use the last generation to apply the rules and get the new one. */
 std::vector<bool> next_generation(std::vector<bool> &grid, const size_t nbr_cell_x, const size_t nbr_cell_y)
 {
   size_t nbr_neig = 0;
@@ -80,30 +83,49 @@ std::vector<bool> next_generation(std::vector<bool> &grid, const size_t nbr_cell
   return new_grid;
 }
 
-void place_pixels(sf::Uint8 *pixels, const std::vector<bool> &grid, const size_t window_height, const size_t nbr_cell_x, const size_t nbr_cell_y, const size_t cell_width, const size_t cell_height)
+/* Use the boolean vector to fill an array of pixel. */
+void place_pixels(sf::Uint8 *pixels, const std::vector<bool> &grid, const size_t window_width, const size_t window_height, const size_t nbr_cell_x,\
+                  const size_t nbr_cell_y, const size_t cell_width, const size_t cell_height, const bool funky)
 {
-  sf::Color dead = sf::Color::White;
-  sf::Color alive = sf::Color::Black;
   bool is_used = false;
   size_t pixel = 0;
   size_t offset_x = 0;
   size_t offset_y = 0;
+  size_t funk_r = 0;
+  size_t funk_g = 0;
+  size_t funk_b = 0;
+  sf::Color dead = sf::Color::White;
+  sf::Color alive = sf::Color::Black;
   for (size_t i = 0; i < nbr_cell_x; ++i)
   {
     for (size_t j = 0; j < nbr_cell_y; ++j)
     {
+      funk_r = rand() % 256;
+      funk_g = rand() % 256;
+      funk_b = rand() % 256;
       is_used = grid[j + i * nbr_cell_y];
       offset_x = i * cell_width * 4;
       offset_y = j * cell_height * 4;
+
+      // Initialize the pixels for each cells
       for (size_t row = 0; row < cell_width; ++row)
       {
         for (size_t col = 0; col < cell_height; ++col)
         {
-          pixel = (offset_y + row * 4) + (offset_x + col * 4) * window_height;
+          pixel = (offset_x + row * 4) + (offset_y + col * 4) * window_width;
 
-          pixels[pixel] = (is_used) ? alive.r : dead.r;
-          pixels[pixel + 1] = (is_used) ? alive.g : dead.g;
-          pixels[pixel + 2] = (is_used) ? alive.b : dead.b;
+          if (funky)
+          {
+            pixels[pixel] = (is_used) ? funk_r : dead.r;
+            pixels[pixel + 1] = (is_used) ? funk_g : dead.g;
+            pixels[pixel + 2] = (is_used) ? funk_b : dead.b;
+          }
+          else
+          {
+            pixels[pixel] = (is_used) ? alive.r : dead.r;
+            pixels[pixel + 1] = (is_used) ? alive.g : dead.g;
+            pixels[pixel + 2] = (is_used) ? alive.b : dead.b;
+          }
           pixels[pixel + 3] = (is_used) ? alive.a : dead.a;
         }
       }
@@ -113,29 +135,30 @@ void place_pixels(sf::Uint8 *pixels, const std::vector<bool> &grid, const size_t
 
 int main()
 {
-  //sf::VideoMode mode = sf::VideoMode::getDesktopMode();
-  sf::RenderWindow window(sf::VideoMode(500, 500), "GOL"/*, sf::Style::Fullscreen*/);
+  sf::VideoMode mode = sf::VideoMode::getDesktopMode();
+  sf::RenderWindow window(mode, "GOL");//, sf::Style::Fullscreen);
   sf::Vector2u window_size = window.getSize();
   size_t window_width = window_size.x;
   size_t window_height = window_size.y;
 
   srand(time(NULL));
 
-  size_t cell_width = 5;
-  size_t cell_height = 5;
+  size_t cell_width = 10;
+  size_t cell_height = 10;
 
-  size_t nbr_cell_x = window_width / cell_width; // 16
-  size_t nbr_cell_y = window_height / cell_height; // 12
-  size_t capacity = nbr_cell_x * nbr_cell_y; // 192
+  size_t nbr_cell_x = window_width / cell_width;
+  size_t nbr_cell_y = window_height / cell_height;
+  size_t capacity = nbr_cell_x * nbr_cell_y;
 
-  std::vector<bool> grid = std::vector<bool>(capacity);
   int threshold_birth = 80;
+  std::vector<bool> grid = std::vector<bool>(capacity);
   randomize(grid, threshold_birth);
 
   size_t pixels_size = window_width * window_height * 4;
   sf::Uint8 pixels[pixels_size];
 
-  place_pixels(pixels, grid, window_height, nbr_cell_x, nbr_cell_y, cell_width, cell_height);
+  bool funky = false;
+  place_pixels(pixels, grid, window_width, window_height, nbr_cell_x, nbr_cell_y, cell_width, cell_height, funky);
 
   sf::Texture texture;
   texture.create(window_width, window_height);
@@ -143,19 +166,19 @@ int main()
   texture.update(pixels);
 
   int current_speed = 250;
-  int prev_speed = 0;
+  int prev_speed = current_speed;
   int incr_speed = 50;
   int limit_speed = 1000;
 
   bool auto_gen = true;
   bool manu_gen = false;
   bool grid_clear = false;
+  bool help = false;
 
   sf::Clock clock;
+  sf::Event event;
   while (window.isOpen())
   {
-    sf::Event event;
-    // Make a function
     while (window.pollEvent(event))
     {
       switch (event.type)
@@ -193,7 +216,7 @@ int main()
               break;
             case sf::Keyboard::Space :
               current_speed = prev_speed;
-              auto_gen = true;
+              auto_gen = !auto_gen;
               break;
             case sf::Keyboard::C :
               grid_clear = true;
@@ -202,33 +225,39 @@ int main()
               randomize(grid, threshold_birth);
               grid_clear = false;
               break;
+            case sf::Keyboard::F :
+              funky = !funky;
+              break;
+            case sf::Keyboard::F1 :
+              help = !help;
+              break;
             default : break;
           }
         default: break;
       }
     }
 
-    window.clear(sf::Color::White);
-
     if (!grid_clear)
     {
-      window.draw(sprite);
-
       if ((auto_gen || manu_gen) && clock.getElapsedTime().asMilliseconds() >= current_speed)
       {
         grid = next_generation(grid, nbr_cell_x, nbr_cell_y);
 
-        place_pixels(pixels, grid, window_height, nbr_cell_x, nbr_cell_y, cell_width, cell_height);
+        place_pixels(pixels, grid, window_width, window_height, nbr_cell_x, nbr_cell_y, cell_width, cell_height, funky);
 
         texture.update(pixels);
-
-        clock.restart();
       }
+
+      window.draw(sprite);
+
       manu_gen = false;
     }
-
+    else
+    {
+      window.clear(sf::Color::White);
+    }
     window.display();
-
+    clock.restart();
   }
   return 0;
 }
